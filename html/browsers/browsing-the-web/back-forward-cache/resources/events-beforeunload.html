@@ -1,0 +1,29 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/common/PrefixedLocalStorage.js"></script>
+<script src="helper.sub.js"></script>
+<script>
+// https://github.com/whatwg/html/pull/5889
+startRecordingEvents(['visibilitychange', 'pagehide', 'pageshow', 'beforeunload', 'load']);
+
+const t = async_test('Events fired (beforeunload handler is set but not unload)');
+runTest(
+  t,
+  () => location.href = backUrl,
+  (isBFCached, observedEvents) => {
+    assert_implements_optional(isBFCached, 'Should be BFCached');
+    // beforeunload events should be fired.
+    assert_array_equals(observedEvents, [
+        'window.load',
+        'window.pageshow',
+        'window.beforeunload',
+        'window.pagehide.persisted',
+        'document.visibilitychange.hidden',
+        'window.visibilitychange.hidden',
+        'document.visibilitychange.visible',
+        'window.visibilitychange.visible',
+        'window.pageshow.persisted']);
+    t.done();
+  }
+);
+</script>

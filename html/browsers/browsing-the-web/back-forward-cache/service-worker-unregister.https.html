@@ -1,0 +1,38 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/common/PrefixedLocalStorage.js"></script>
+<script>
+async function unregisterServiceWorker(scope) {
+  const registration = await navigator.serviceWorker.getRegistration(scope);
+  if (!registration)
+    return;
+  return registration.unregister();
+}
+
+promise_test(async t => {
+  const workerUrl = 'resources/clients-matchall-service-worker.js';
+  await unregisterServiceWorker(workerUrl);
+  const registration = await navigator.serviceWorker.register(workerUrl);
+
+  const prefixedLocalStorage = new PrefixedLocalStorageTest();
+  window.open(prefixedLocalStorage.url('resources/service-worker-unregister.html'),
+    '_blank',
+    'noopener');
+
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // At this time, we expect the new window is navigated to
+  // resources/service-worker-unregister-back.html here, and
+  // resources/service-worker-unregister.https.html (controlled by the SW) is
+  // in BFCache.
+  // TODO: To make sure this, it's better to communicate with
+  // resources/service-worker-unregister-back.html. localStorage can't be used
+  // because resources/service-worker-unregister-back.html is cross-site.
+
+  // This cause crash on Chromium.
+  await registration.unregister();
+
+  await fetch_tests_from_prefixed_local_storage(prefixedLocalStorage);
+}, 'Unregister service worker while a controlled page is in BFCache');
+</script>

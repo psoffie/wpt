@@ -130,6 +130,10 @@
                         w.postMessage(message_arg, "*");
                     }
                 });
+        if (window.prefixedLocalStorage) {
+            window.prefixedLocalStorage.setItem('dispatched_messages.' + Math.random(),
+                                                JSON.stringify(message_arg));
+        }
     };
 
     WindowTestEnvironment.prototype._forEach_windows = function(callback) {
@@ -3168,6 +3172,25 @@
         );
     };
 
+    /*
+     * Constructs a RemoteContext that tracks tests from prefixed local storage.
+     * Test results from a window where
+     * - `window.prefixedLocalStorage` is defined using `/common/PrefixedLocalStorage.js`
+     *   like `window.prefixedLocalStorage = new PrefixedLocalStorageResource();` and
+     * - testharness.js is loaded
+     * are received via `prefixedLocalStorage`.
+     */
+    Tests.prototype.create_remote_prefixed_local_storage = function(prefixedLocalStorage) {
+        const channel = new MessageChannel();
+        // This receives the random keys prefixed by 'dispatched_messages' sent by the remote
+        // window's `WindowTestEnvironment.prototype._dispatch`.
+        prefixedLocalStorage.onSet('dispatched_messages', e => {
+            channel.port1.postMessage(JSON.parse(e.newValue));
+        });
+        channel.port2.start();
+        return new RemoteContext(null, channel.port2);
+    };
+
     Tests.prototype.fetch_tests_from_worker = function(worker) {
         if (this.phase >= this.phases.COMPLETE) {
             return;
@@ -3195,6 +3218,24 @@
         tests.fetch_tests_from_window(window);
     }
     expose(fetch_tests_from_window, 'fetch_tests_from_window');
+
+
+    Tests.prototype.fetch_tests_from_prefixed_local_storage = function(prefixedLocalStorage) {
+        if (this.phase >= this.phases.COMPLETE) {
+            return;
+        }
+
+        var remoteContext = this.create_remote_prefixed_local_storage(prefixedLocalStorage);
+        this.pending_remotes.push(remoteContext);
+        return remoteContext.done.then(() => {
+            prefixedLocalStorage.cleanup();
+        });
+    };
+
+    function fetch_tests_from_prefixed_local_storage(prefixedLocalStorage) {
+        return tests.fetch_tests_from_prefixed_local_storage(prefixedLocalStorage);
+    }
+    expose(fetch_tests_from_prefixed_local_storage, 'fetch_tests_from_prefixed_local_storage');
 
     function timeout() {
         if (tests.timeout_length === null) {

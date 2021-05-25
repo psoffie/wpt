@@ -1,0 +1,27 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/common/PrefixedLocalStorage.js"></script>
+<script src="helper.sub.js"></script>
+<script>
+startRecordingEvents(['visibilitychange', 'pagehide', 'pageshow', 'load']);
+
+const t = async_test('Unregistering service worker while a controlled page is in BFCache');
+console.error(performance.now());
+runTest(
+  t,
+  () => location.href = origin + '/html/browsers/browsing-the-web/back-forward-cache/resources/service-worker-unregister-back.html',
+  (isBFCached, observedEvents) => {
+    assert_implements_optional(isBFCached, 'Should be BFCached');
+    assert_array_equals(observedEvents, [
+        'window.load',
+        'window.pageshow',
+        'window.pagehide.persisted',
+        'document.visibilitychange.hidden',
+        'window.visibilitychange.hidden',
+        'document.visibilitychange.visible',
+        'window.visibilitychange.visible',
+        'window.pageshow.persisted']);
+    t.done();
+  }
+);
+</script>

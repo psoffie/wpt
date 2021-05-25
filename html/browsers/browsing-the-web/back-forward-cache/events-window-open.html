@@ -1,0 +1,11 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/common/PrefixedLocalStorage.js"></script>
+<title>Events fired during BFCached back navigation (cross-site, window.open() without noopener option)</title>
+<script>
+const prefixedLocalStorage = new PrefixedLocalStorageTest();
+fetch_tests_from_prefixed_local_storage(prefixedLocalStorage);
+window.open(prefixedLocalStorage.url('resources/events.html'),
+  '_blank');
+</script>

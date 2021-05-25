@@ -1,0 +1,20 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/common/PrefixedLocalStorage.js"></script>
+<script>
+const prefixedLocalStorage = new PrefixedLocalStorageTest();
+fetch_tests_from_prefixed_local_storage(prefixedLocalStorage);
+
+// Needs check_eligibility_after_pagehide
+// {BackForwardCacheMetrics::NotRestoredReason::kBlocklistedFeatures},
+// {blink::scheduler::WebSchedulerTrackedFeature::kBroadcastChannel}
+const url = new URL('../resources/simple.py', location.href);
+url.searchParams.set('script1',
+  `window.bc = new BroadcastChannel('foo');
+   window.addEventListener('pagehide', () => window.bc.close());`);
+url.searchParams.set('script2', `assert_implements_optional(isBFCached, 'Should be BFCached');`);
+window.open(prefixedLocalStorage.url(url.href),
+  '_blank',
+  'noopener');
+</script>

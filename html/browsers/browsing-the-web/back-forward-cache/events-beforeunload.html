@@ -1,0 +1,11 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/common/PrefixedLocalStorage.js"></script>
+<script>
+const prefixedLocalStorage = new PrefixedLocalStorageTest();
+fetch_tests_from_prefixed_local_storage(prefixedLocalStorage);
+window.open(prefixedLocalStorage.url('resources/events-beforeunload.html'),
+  '_blank',
+  'noopener');
+</script>

@@ -1,0 +1,39 @@
+<!DOCTYPE HTML>
+<meta name="timeout" content="long">
+<script src="/resources/testharness.js"></script>
+<script src="/common/PrefixedLocalStorage.js"></script>
+<script src="helper.sub.js"></script>
+<script>
+// https://bugs.chromium.org/p/chromium/issues/detail?id=1202687
+// https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers:fully-active
+const t = async_test('Timers should stop during the page is in BFCache');
+
+// Timeline:
+// t= 0.0: setTimeout(A, 5000) is executed.
+// t= 2.0: Navigation to timers-back.html. 3 sec is remaining for A.
+// t= 5.0: (A would be added if the timer were not suspended and were fired during BFCache)
+// t= 6.0: Back navigation is done. B is added.
+//         (A would be added around here if the timer were not suspended during BFCache and fired after the page is resumed from BFCache)
+// t= 7.0: C is added.
+// t= 9.0: A is added.
+// t= 9.5: Test finishes.
+// t=11.0: (A would be added if the remaining time were reset when the page is put in BFCache)
+
+// Raw setTimeout() (instead of step_timeout()) is used here because we can't use step_timeout() in `timers-back.html`.
+runTest(
+  t,
+  () => {
+    setTimeout(() => prefixedLocalStorage.pushItem('events', 'A'), 5000);
+    setTimeout(() => location.href = origin + '/html/browsers/browsing-the-web/back-forward-cache/resources/timers-back.html', 2000);
+  },
+  (isBFCached, observedEvents) => {
+    assert_implements_optional(isBFCached, 'Should be BFCached');
+    prefixedLocalStorage.pushItem('events', 'B');
+    setTimeout(() => prefixedLocalStorage.pushItem('events', 'C'), 1000);
+    setTimeout(t.step_func_done(() => {
+      assert_array_equals(prefixedLocalStorage.getPushedItems('events'),
+                          ['B', 'C', 'A']);
+    }), 3500);
+  }
+);
+</script>

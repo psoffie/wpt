@@ -1,0 +1,47 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/common/PrefixedLocalStorage.js"></script>
+<script src="helper.sub.js"></script>
+<script>
+startRecordingEvents(['visibilitychange', 'pagehide', 'pageshow', 'load']);
+
+// https://github.com/whatwg/html/issues/6207
+const t = async_test('back navigation to pushState()d page');
+
+const pathname = '/html/browsers/browsing-the-web/back-forward-cache/resources/pushstate.html';
+
+runTest(
+  t,
+  () => {
+    history.pushState("blue", '', location.href + '&pushState=yes');
+    location.href = backUrl;
+  },
+  (isBFCached, observedEvents) => {
+    const shouldDisableBFCache = new URL(location.href).searchParams.get('disableBFCache') !== null;
+    if (shouldDisableBFCache) {
+      assert_implements_optional(!isBFCached, 'Should not be BFCached');
+    } else {
+      assert_implements_optional(isBFCached, 'Should be BFCached');
+    }
+
+    assert_equals(location.pathname, pathname, 'url (pathname) 1');
+    assert_equals(
+      new URL(location.href).searchParams.get('pushState'),
+      'yes',
+      'url (searchParams pushState) 1');
+    assert_equals(history.state, 'blue', 'history.state 1');
+
+    window.onpopstate = t.step_func_done(() => {
+      assert_equals(location.pathname, pathname, 'url (pathname) 2');
+      assert_equals(
+        new URL(location.href).searchParams.get('pushState'),
+        null,
+        'url (searchParams pushState) 2');
+      // Failing on Safari?
+      assert_equals(history.state, null, 'history.state 2');
+    });
+
+    history.back();
+  }
+);
+</script>

@@ -1,0 +1,49 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/common/PrefixedLocalStorage.js"></script>
+<script>
+async function unregisterServiceWorker(scope) {
+  const registration = await navigator.serviceWorker.getRegistration(scope);
+  if (!registration)
+    return;
+  return registration.unregister();
+}
+
+function waitForClients(prefixedLocalStorage, key) {
+  return new Promise(resolve => {
+      prefixedLocalStorage.onSet(key, e => {
+          resolve(JSON.parse(e.newValue));
+        });
+    });
+}
+
+promise_test(async t => {
+  const workerUrl = 'resources/clients-matchall-service-worker.js';
+  await unregisterServiceWorker(workerUrl);
+  const registration = await navigator.serviceWorker.register(workerUrl);
+  t.add_cleanup(_ => registration.unregister());
+
+  const prefixedLocalStorage = new PrefixedLocalStorageTest();
+  const clientsPromise1 = waitForClients(prefixedLocalStorage, 'clients-1');
+  const clientsPromise2 = waitForClients(prefixedLocalStorage, 'clients-2');
+  const clientsPromise3 = waitForClients(prefixedLocalStorage, 'clients-3');
+
+  // Absolute URL of the page to be BFCached.
+  const url = prefixedLocalStorage.url(new URL('resources/service-worker-clients-1.sub.https.html', location.href).href);
+
+  window.open(url, '_blank', 'noopener');
+  await fetch_tests_from_prefixed_local_storage(prefixedLocalStorage);
+
+  const clients1 = await clientsPromise1;
+  const clients2 = await clientsPromise2;
+  const clients3 = await clientsPromise3;
+
+  assert_true(clients1.indexOf(url) >= 0,
+    'Clients#matchAll() should contain the page before BFCached');
+  assert_false(clients2.indexOf(url) >= 0,
+    'Clients#matchAll() should not contain the page while in BFCache');
+  assert_true(clients3.indexOf(url) >= 0,
+    'Clients#matchAll() should contain the page after BFCached');
+}, 'Clients#matchAll()');
+</script>
